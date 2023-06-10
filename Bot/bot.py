@@ -209,22 +209,28 @@ async def image(interaction: discord.Interaction, arg: str):
 @client.tree.command(name="define", description="Define a word")
 @app_commands.describe(arg="search term")
 async def define(interaction: discord.Interaction, arg: str):
-    noun_def, verb_def = dictionary.search_dict(arg)
+    try:
+        noun_def, verb_def = dictionary.search_dict(arg)
 
-    nouns = ""
-    verbs = ""
+        nouns = ""
+        verbs = ""
 
-    for i in noun_def:
-        nouns += i + "\n\n"
+        for i in noun_def:
+            nouns += i + "\n\n"
 
-    for i in verb_def:
-        verbs += i + "\n\n"
+        for i in verb_def:
+            verbs += i + "\n\n"
 
-    emb = create_embed(f"Definition for - {arg}", "", get_random_colour(),
-                       [("Noun", nouns, False),
-                        ("Verb", verbs, False)])
+        emb = create_embed(f"Definition for - {arg}", "", get_random_colour(),
+                           [("Noun", nouns, False),
+                            ("Verb", verbs, False)])
 
-    await interaction.response.send_message(embed=emb, ephemeral=False)
+        await interaction.response.send_message(embed=emb, ephemeral=False)
+    except:
+        emb = create_embed("Dictionary", "Error getting information :(", get_random_colour(),
+                           [("", f"Sorry I couldn't get the definition for - {arg}", False)])
+        await interaction.response.send_message(embed=emb, ephemeral=False)
+
 
 # ======================================================================================================================
 # Loop Events
