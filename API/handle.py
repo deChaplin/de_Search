@@ -19,3 +19,23 @@ def search_dict(word):
                     verb_definition.append(k['definition'])
 
     return noun_definition[:3], verb_definition[:3]
+
+
+def search_rezi(name, key):
+    response = json.loads(apiUtils.getRexi(name, key))
+
+    links = []
+    titles = []
+
+    for i in response['hits']:
+        titles.append(i['title'])
+        links.append(i['link'])
+
+
+    #for i in titles:
+    #    print(i)
+    #    print(links[titles.index(i)])
+
+
+
+    return titles, links

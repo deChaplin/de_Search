@@ -5,7 +5,7 @@ import os
 import random
 import wikipedia
 
-from API import dictionary
+from API import handle
 from discord import app_commands
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
@@ -34,6 +34,7 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 GOOGLE_KEY = os.getenv('GOOGLE_API_KEY')
 SEARCH_ENGINE_ID = os.getenv('SEARCH_ENGINE_ID')
+REZI_KEY = os.getenv('REXI_API_KEY')
 # Remove the default help command
 client.remove_command('help')
 
@@ -73,19 +74,15 @@ color_codes = [
 
 @client.event
 async def on_ready():
-    #sync_commands()
-
     try:
         synced = await client.tree.sync()
-        print(f"Synced {synced} commands")
+        #print(f"Synced {synced} commands")
     except Exception as e:
         print(e)
 
     print('Bot is ready!')
     change_status.start()
     guild_database.create_database()
-
-    #response = dictionary.search_dict("test")
 
 
 async def sync_commands():
@@ -147,26 +144,44 @@ async def checkPrefix(ctx):
 
 
 # Help command
-@client.command()
-async def help(ctx):
-    embed = create_embed("de_Search help", "Commands for the search Bot", get_random_colour(), [
-        ("generate <prompt>", "Generates an image using AI", True), # TODO
-        ("image <prompt>", "Gets an image", True), # TODO
-        ("search <prompt>", "Searches using <> search engine", True), # TODO
+@client.tree.command(name="help", description="Displays the help menu")
+async def help(interaction: discord.Interaction):
+    emb = create_embed("de_Search help", "Commands for the search Bot", get_random_colour(), [
+        ("generate <prompt>", "Generates an image using AI", True),  # TODO
+        ("image <prompt>", "Gets an image", True),  # TODO
+        ("search <prompt>", "Searches using <> search engine", True),  # TODO
 
-        ("wiki <prompt>", "Searches using the Wikipedia search engine", True), # TODO
-        ("define <prompt>", "Searches using the Dictionary search engine", True), # TODO
-
-        ("rezi <prompt>", "Searches using the Rezi.one search engine", True), # TODO
-        ("checkPrefix", "Shows current prefix for the server", True),
-        ("help", "Shows this help menu", True),
+        ("wiki <prompt>", "Searches using the Wikipedia search engine", True),  # TODO
+        ("define <prompt>", "Searches using the Dictionary search engine", True),  # TODO
+        ("rezi <prompt>", "Searches using the Rezi.one search engine", True),  # TODO
     ])
 
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=emb, ephemeral=False)
 
 # ======================================================================================================================
 # Search commands
 # ======================================================================================================================
+
+
+@client.tree.command(name="arrr", description="Gets an image")
+@app_commands.describe(game="the game you want to search for")
+async def arrr(interaction: discord.Interaction, game: str):
+    try:
+        titles, links = handle.search_rezi(game, REZI_KEY)
+
+        results = ""
+
+        for i in titles:
+            results += i + "\n" + links[titles.index(i)] + "\n\n"
+
+        emb = create_embed(f"Downloads for - {game}", "", get_random_colour(),
+                           [("", results, False)])
+
+        await interaction.response.send_message(embed=emb, ephemeral=False)
+    except:
+        emb = create_embed(f"Unable to find game", "Please check manually ️", get_random_colour(), [("", "https://rezi.one/", False)])
+        await interaction.response.send_message(embed=emb, ephemeral=False)
+
 
 
 @client.tree.command(name="wiki", description="Searches Wikipedia")
@@ -210,7 +225,7 @@ async def image(interaction: discord.Interaction, arg: str):
 @app_commands.describe(arg="search term")
 async def define(interaction: discord.Interaction, arg: str):
     try:
-        noun_def, verb_def = dictionary.search_dict(arg)
+        noun_def, verb_def = handle.search_dict(arg)
 
         nouns = ""
         verbs = ""

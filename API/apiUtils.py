@@ -11,3 +11,21 @@ def getAccountName(key, steamId):   # Gets the Account Summaries
 def getDict(word):
     response = requests.request("GET", f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}")
     return response.text
+
+
+def getRexi(name, key):
+    url = "https://search.rezi.one/indexes/rezi/search"
+
+    payload = {
+        "q": name,
+        "limit": 10
+    }
+    headers = {
+        "accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    return response.text

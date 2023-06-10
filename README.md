@@ -6,13 +6,13 @@
 - "image <prompt>" - "Gets an image" (You will need an API key from  - https://console.cloud.google.com/ and a search engine ID from - https://cse.google.com/cse/all)
 - "wiki <prompt>" - "Searches using the Wikipedia search engine"
 - "define <prompt>" - "Gets the definition of a word"
+- "arrr <game>" - "Searches using the Rezi.one search engine"
 - "checkPrefix" - "Shows current prefix for the server"
 - "help" - "Shows this help menu"
 
 ### Todo
 - "generate <prompt>" - "Generates an image using AI"
 - "search <prompt>" - "Searches using <> search engine"
-- "rezi <prompt>" - "Searches using the Rezi.one search engine"
   
 ## .env file format
   
