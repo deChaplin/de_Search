@@ -1,13 +1,14 @@
 import asyncio
 import discord
-from discord import app_commands, Embed
-from discord.ext import commands, tasks
-import os
-from dotenv import load_dotenv
-import random
 import guild_database
+import os
+import random
+import wikipedia
+
+from discord import app_commands
+from discord.ext import commands, tasks
+from dotenv import load_dotenv
 from googleapiclient.discovery import build
-import requests
 
 # Setting up the client and intents
 intents = discord.Intents.all()
@@ -165,13 +166,32 @@ async def help(ctx):
 # ======================================================================================================================
 
 
-@client.tree.command(name="hello")
-async def hello(interaction: discord.Interaction):
-    await interaction.response.send_message(f"Hello! {interaction.user.mention}")
+@client.tree.command(name="wiki", description="Searches Wikipedia")
+@app_commands.describe(arg="search term")
+async def wiki(interaction: discord.Interaction, arg: str):
+
+    try:
+        page = wikipedia.page(arg)
+        title = page.title
+
+        try:
+            summary = wikipedia.summary(arg, sentences=3)
+        except:
+            summary = "Summary not available :("
+        url = page.url
+
+        emb = create_embed("Wikipedia", "", get_random_colour(),
+                           [(title, "", False), ("Summary", summary, False), ("Link", url, False)])
+
+        await interaction.response.send_message(embed=emb, ephemeral=False)
+    except:
+        emb = create_embed("Wikipedia", "Error getting information :(", get_random_colour(),
+                           [("Link", f"https://en.wikipedia.org/wiki/{arg}", False)])
+        await interaction.response.send_message(embed=emb, ephemeral=False)
 
 
 @client.tree.command(name="image", description="Gets an image")
-@app_commands.describe(arg = "image to search for")
+@app_commands.describe(arg="image to search for")
 async def image(interaction: discord.Interaction, arg: str):
     ran = random.randint(0, 9)
     resource = build("customsearch", "v1", developerKey=GOOGLE_KEY).cse()
@@ -184,7 +204,7 @@ async def image(interaction: discord.Interaction, arg: str):
 
 
 @client.tree.command(name="search", description="Search the internet")
-@app_commands.describe(arg = "search term")
+@app_commands.describe(arg="search term")
 async def search(interaction: discord.Interaction, arg: str):
     await interaction.response.send_message(f"You said {arg}")
 
