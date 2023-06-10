@@ -5,6 +5,7 @@ import os
 import random
 import wikipedia
 
+from API import dictionary
 from discord import app_commands
 from discord.ext import commands, tasks
 from dotenv import load_dotenv
@@ -83,6 +84,8 @@ async def on_ready():
     print('Bot is ready!')
     change_status.start()
     guild_database.create_database()
+
+    #response = dictionary.search_dict("test")
 
 
 async def sync_commands():
@@ -203,10 +206,25 @@ async def image(interaction: discord.Interaction, arg: str):
     await interaction.response.send_message(embed=emb, ephemeral=False)
 
 
-@client.tree.command(name="search", description="Search the internet")
+@client.tree.command(name="define", description="Define a word")
 @app_commands.describe(arg="search term")
-async def search(interaction: discord.Interaction, arg: str):
-    await interaction.response.send_message(f"You said {arg}")
+async def define(interaction: discord.Interaction, arg: str):
+    noun_def, verb_def = dictionary.search_dict(arg)
+
+    nouns = ""
+    verbs = ""
+
+    for i in noun_def:
+        nouns += i + "\n\n"
+
+    for i in verb_def:
+        verbs += i + "\n\n"
+
+    emb = create_embed(f"Definition for - {arg}", "", get_random_colour(),
+                       [("Noun", nouns, False),
+                        ("Verb", verbs, False)])
+
+    await interaction.response.send_message(embed=emb, ephemeral=False)
 
 # ======================================================================================================================
 # Loop Events
