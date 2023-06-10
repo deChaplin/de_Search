@@ -1,17 +1,19 @@
 import asyncio
 import discord
+from discord import app_commands, Embed
 from discord.ext import commands, tasks
 import os
-from itertools import cycle
 from dotenv import load_dotenv
 import random
-from Checker import vacChecker
 import guild_database
+from googleapiclient.discovery import build
+import requests
 
 # Setting up the client and intents
 intents = discord.Intents.all()
 # Setting up the bots prefix
 DEFAULT_PREFIX = '!'
+
 
 async def get_prefix(client, message):
     if not message.guild:
@@ -25,12 +27,10 @@ async def get_prefix(client, message):
             return commands.when_mentioned_or(DEFAULT_PREFIX)(client, message)
 
 client = commands.Bot(command_prefix=get_prefix, intents=intents)
-# Setting up the status to cycle through
-status = cycle(["your steam accounts!", "to see who gets banned!"])
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
-KEY = os.getenv('KEY')
+GOOGLE_KEY = os.getenv('GOOGLE_API_KEY')
 # Remove the default help command
 client.remove_command('help')
 
@@ -70,12 +70,25 @@ color_codes = [
 
 @client.event
 async def on_ready():
-    vacChecker.start_up()
+    #sync_commands()
+
+    try:
+        synced = await client.tree.sync()
+        print(f"Synced {synced} commands")
+    except Exception as e:
+        print(e)
+
     print('Bot is ready!')
     change_status.start()
-    check_vac.start()
-
     guild_database.create_database()
+
+
+async def sync_commands():
+    try:
+        synced = await client.tree.sync()
+        print(f"Synced {synced} commands")
+    except Exception as e:
+        print(e)
 
 
 # On guild join
@@ -113,7 +126,6 @@ async def on_message(message):
 # Standard Commands
 # ======================================================================================================================
 
-
 # Command to change the bots prefix
 @client.command()
 async def setPrefix(ctx, prefix):
@@ -132,12 +144,15 @@ async def checkPrefix(ctx):
 # Help command
 @client.command()
 async def help(ctx):
-    embed = create_embed("VAC Checker Help", "Commands for the VAC Checker Bot", get_random_colour(), [
-        ("status <steamID>", "Check the status of a specific account", True),
-        ("add <steamID>", "Add a steam account to the database", True),
-        ("remove <steamID>", "Remove a steam account from the database", True),
+    embed = create_embed("de_Search help", "Commands for the search Bot", get_random_colour(), [
+        ("generate <prompt>", "Generates an image using AI", True), # TODO
+        ("image <prompt>", "Gets an image", True), # TODO
+        ("search <prompt>", "Searches using <> search engine", True), # TODO
 
-        ("setPrefix", "Change the prefix for the server", True),
+        ("wiki <prompt>", "Searches using the Wikipedia search engine", True), # TODO
+        ("define <prompt>", "Searches using the Dictionary search engine", True), # TODO
+
+        ("rezi <prompt>", "Searches using the Rezi.one search engine", True), # TODO
         ("checkPrefix", "Shows current prefix for the server", True),
         ("help", "Shows this help menu", True),
     ])
@@ -145,54 +160,32 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 # ======================================================================================================================
-# VAC Checker Commands
+# Search commands
 # ======================================================================================================================
 
 
-# Command to check the status of a steam account
-@client.command()
-async def status(ctx, steam_id):
-    try:
-        steamID, name, game_banned, game_bans, vac_banned, vac_bans, last_ban = \
-            vacChecker.check_vac(KEY, steam_id, ctx.message.author.id)
-
-        if game_banned == "Yes" or vac_banned == "Yes":
-            color = 0xFF0000
-        else:
-            color = 0x44ff00
-
-        embed = create_embed("Profile Status", "The current status of " + name, color, [
-            ("Name - ", name, False),
-            ("Steam ID - ", steamID, False),
-            ("Game Banned - ", game_banned, False),
-            ("Game Bans - ", game_bans, False),
-            ("VAC Banned - ", vac_banned, False),
-            ("VAC Bans - ", vac_bans, False),
-            ("Last Ban - ", get_days_since_ban(last_ban), False)
-        ])
-
-        await ctx.send(embed=embed)
-    except:
-        await ctx.send("Error checking account!")
+@client.tree.command(name="hello")
+async def hello(interaction: discord.Interaction):
+    await interaction.response.send_message(f"Hello! {interaction.user.mention}")
 
 
-# Command to add a steam account to the database
-@client.command()
-async def add(ctx, steam_id):
-    try:
-        name = vacChecker.add_account(KEY, steam_id, ctx.message.author.id)
-        await ctx.send(f"{name} added to database!")
-    except:
-        await ctx.send("Error adding account to database!")
+@client.tree.command(name="image", description="Gets an image")
+@app_commands.describe(arg = "image to search for")
+async def image(interaction: discord.Interaction, arg: str):
+    ran = random.randint(0, 9)
+    resource = build("customsearch", "v1", developerKey=GOOGLE_KEY).cse()
+    result = resource.list(q=f"{arg}", cx="a2b5d1cf5a37f430b", searchType="image").execute()
+    url = result['items'][ran]['link']
+
+    emb = create_image_embed(f"Your image - {arg}", "", get_random_colour(), url)
+
+    await interaction.response.send_message(embed=emb, ephemeral=False)
 
 
-# Command to remove a steam account from the database
-@client.command()
-async def remove(ctx, steam_id):
-    if vacChecker.remove_account(steam_id, ctx.message.author.id):
-        await ctx.send("Account removed from database!")
-    else:
-        await ctx.send("Only the person who added the account can remove it!")
+@client.tree.command(name="search", description="Search the internet")
+@app_commands.describe(arg = "search term")
+async def search(interaction: discord.Interaction, arg: str):
+    await interaction.response.send_message(f"You said {arg}")
 
 # ======================================================================================================================
 # Loop Events
@@ -201,50 +194,12 @@ async def remove(ctx, steam_id):
 
 @tasks.loop(seconds=1)
 async def change_status():
-    status = ["your steam accounts!", " who gets banned!", " you 👀", " people get banned",
+    status = [" 1", " 2", " 3 👀", " 4",
                str(get_guilds()) + " servers!"]
 
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching,
                                                            name=(random.choice(status))))
     await asyncio.sleep(3)
-
-
-# Loop to check for vac bans on all accounts every hour
-@tasks.loop(minutes=60)
-async def check_vac():
-
-    # Get list of user ids from database
-    # iterate through list to check all accounts belonging to user
-    # send private message to user
-
-    # Will run for the number of unique discord ids in the database
-    discord_ids = vacChecker.get_discord_id()
-
-    if discord_ids:
-        for index, id in enumerate(discord_ids):
-            user = client.get_user(int(id))
-
-            steam_ids = vacChecker.get_steam_id(int(id))
-
-            for s_index, s_id in enumerate(steam_ids):
-                steamID, name, game_banned, game_bans, vac_banned, vac_bans, last_ban = \
-                    vacChecker.check_vac(KEY, s_id, int(id))
-
-                if game_banned == "Yes" or vac_banned == "Yes":
-                    embed = create_embed("Profile Status", "The current status of " + name,
-                                         get_random_colour(), [
-                                             ("Name - ", name, False),
-                                             ("Steam ID - ", steamID, False),
-                                             ("Game Banned - ", game_banned, False),
-                                             ("Game Bans - ", game_bans, False),
-                                             ("VAC Banned - ", vac_banned, False),
-                                             ("VAC Bans - ", vac_bans, False),
-                                             ("Last Ban - ", get_days_since_ban(last_ban), False)
-                                         ])
-                    await user.send(embed=embed)
-                    vacChecker.remove_account(steamID, int(id))
-    else:
-        print(f"User with ID {str(id)} not found.")
 
 
 # ======================================================================================================================
@@ -256,16 +211,6 @@ def get_random_colour():
     return random.choice(color_codes)
 
 
-# Take the days since last ban and return how many days ago it was
-def get_days_since_ban(days):
-    if days == 0:
-        return "Today"
-    elif days == 1:
-        return "Yesterday"
-    else:
-        return str(days) + " days ago"
-
-
 def create_embed(title, description, colour, fields):
     embed = discord.Embed(
         title=title,
@@ -274,6 +219,18 @@ def create_embed(title, description, colour, fields):
     )
     for field in fields:
         embed.add_field(name=field[0], value=field[1], inline=field[2])
+
+    embed.set_footer(text="Developed by de_Chaplin", icon_url="https://avatars.githubusercontent.com/u/85872356?v=4")
+    return embed
+
+def create_image_embed(title, description, colour, url):
+    embed = discord.Embed(
+        title=title,
+        description=description,
+        color=colour
+    )
+
+    embed.set_image(url=url)
 
     embed.set_footer(text="Developed by de_Chaplin", icon_url="https://avatars.githubusercontent.com/u/85872356?v=4")
     return embed
