@@ -31,6 +31,7 @@ client = commands.Bot(command_prefix=get_prefix, intents=intents)
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
 GOOGLE_KEY = os.getenv('GOOGLE_API_KEY')
+SEARCH_ENGINE_ID = os.getenv('SEARCH_ENGINE_ID')
 # Remove the default help command
 client.remove_command('help')
 
@@ -174,7 +175,7 @@ async def hello(interaction: discord.Interaction):
 async def image(interaction: discord.Interaction, arg: str):
     ran = random.randint(0, 9)
     resource = build("customsearch", "v1", developerKey=GOOGLE_KEY).cse()
-    result = resource.list(q=f"{arg}", cx="a2b5d1cf5a37f430b", searchType="image").execute()
+    result = resource.list(q=f"{arg}", cx=SEARCH_ENGINE_ID, searchType="image").execute()
     url = result['items'][ran]['link']
 
     emb = create_image_embed(f"Your image - {arg}", "", get_random_colour(), url)
