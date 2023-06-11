@@ -1,5 +1,7 @@
 # de_Search
 
+A discord bot for searching various places of the internet e.g. pictures, wiki or games
+
 ## Commands
 
 ### Working
